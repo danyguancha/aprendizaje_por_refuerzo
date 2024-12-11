@@ -46,6 +46,34 @@ def move_and_reward(state, action, labyrinth):
         done = labyrinth[nx][ny] == 1 or (nx == rows - 1 and ny == cols - 1)
         return next_state, reward, done
     return state, -1, False
+def sarsa(labyrinth, alpha, gamma, epsilon, nS, nA, k):
+    Q = inicializar_Q(nS, nA)
+    retorno = []
+    
+    for episodio in range(k):
+        retorno_acumulado = 0
+        # Ir al primer estado del episodio
+        state = 0
+        # Elegir la acción usando e-greedy
+        action = e_greedy(state, Q, epsilon, nA)
+        done = False        
+        
+        while not done:
+            next_state, reward, done = move_and_reward(state, action, labyrinth)
+            next_action = e_greedy(next_state, Q, epsilon, nA)  # Elegir la siguiente acción usando e-greedy
+            retorno_acumulado += reward
+            
+            # Actualizar Q usando la fórmula de SARSA
+            if not done:
+                Q[state][action] += alpha * (reward + (gamma * Q[next_state][next_action]) - Q[state][action])
+            else:
+                Q[state][action] += alpha * (reward - Q[state][action])
+                retorno.append(retorno_acumulado)
+            
+            # Actualizar el estado y la acción
+            state, action = next_state, next_action
+            
+    return Q, retorno
 
 def q_learning(labyrinth, alpha, gamma, epsilon, nS, nA, k):
 
@@ -319,6 +347,7 @@ else:
     nA = 4
     k = 3000
     Q, retorno = q_learning(maze, alpha, gamma, epsilon, nS, nA, k)
+    Q, retorno = sarsa(maze, alpha, gamma, epsilon, nS, nA, k)  # Cambiar a SARSA
 
     state = 0
     while True:
@@ -350,7 +379,8 @@ else:
 
         if count % 24 == 0:
             mover_robot(Q, detected_shapes)
+            
 
-
+            
 cap.release()
 cv2.destroyAllWindows()
