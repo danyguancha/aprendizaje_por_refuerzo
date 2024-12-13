@@ -219,39 +219,37 @@ def draw_dotted_line_in_cell(image, cell_center_x, cell_center_y, cell_width, ce
         cv2.line(image, (cell_center_x, y), (cell_center_x, y + 5), (0, 0, 255), 1)
     return image
 
-posicion_inicial_robot = {"x": None, "y": None}
 
-def calibrar_robot(detected_shapes, posx, posy):
-    #Calibra el robot para mantenerlo en línea recta hacia adelante
-    posicion_actual_x = detected_shapes['x']
-    posicion_actual_y = detected_shapes['y']
-
-    print("Posición actual:", posicion_actual_x, posicion_actual_y)
-    print("Posición inicial (calibración):", posx, posy)
+def calibrar_robot(detected_shapes):
+    """
+    Calibra el robot para mantenerlo en línea recta hacia adelante en ambos sentidos.
+    Si x aumenta, el robot va de izquierda a derecha. Si x disminuye, va de derecha a izquierda.
+    """
+    centro_x = detected_shapes['cell_center_x']
+    centro_y = detected_shapes['cell_center_y']
 
     # Calcular desviaciones
-    diferencia_x = posx - posicion_actual_x
-    diferencia_y = posy - posicion_actual_y
+    diferencia_x = detected_shapes['x'] - centro_x
+    diferencia_y = detected_shapes['y'] - centro_y
+    tolerancia = 5
 
-    # Corrección lateral en el eje Y
-    if diferencia_y > 15:  # Si se desvía hacia la derecha
-        print("Corrigiendo hacia la izquierda con 'a'")
-        comunicacionArduino.send_command("a")
-        detected_shapes['y'] = posy
-    if diferencia_y < -15:  # Si se desvía hacia la izquierda
-        print("Corrigiendo hacia la derecha con 'd'")
-        comunicacionArduino.send_command("d")
-        detected_shapes['y'] = posy
-   
+    # Corrección en el eje Y (desviación vertical)
+    if abs(diferencia_y) > tolerancia:  # Si la desviación es significativa
+        if diferencia_y > tolerancia:  # Desviación hacia abajo (derecha en vista)
+            print("Corrigiendo hacia la izquierda con 'a'")
+            comunicacionArduino.send_command("a")
+        elif diferencia_y < -tolerancia:  # Desviación hacia arriba (izquierda en vista)
+            print("Corrigiendo hacia la derecha con 'd'")
+            comunicacionArduino.send_command("d")
 
     # Imprimir las diferencias para depuración
     print(f"Diferencia en X: {diferencia_x}, Diferencia en Y: {diferencia_y}")
 
-
 def mover_robot(politica, posicionesRobot):
-    global posicion_inicial_robot
-
-    if not posicionesRobot:  # Si no se detectan formas, no hacer nada
+    """
+    Controla el movimiento del robot basado en la política y la posición actual detectada.
+    """
+    if not posicionesRobot:  # Si no se detectan posiciones, no hacer nada
         print("No se detectó posición del robot.")
         return
 
@@ -260,15 +258,28 @@ def mover_robot(politica, posicionesRobot):
 
     print("Posición actual:", politica[posicionActual])
 
-    if posicion_inicial_robot["x"] is None and posicion_inicial_robot["y"] is None:
-        # Guardar posición inicial en el primer movimiento
-        posicion_inicial_robot["x"] = robot_actual['x']
-        posicion_inicial_robot["y"] = robot_actual['y']
-
     if politica[posicionActual][3] == 1:  # Movimiento hacia adelante
         print("Adelante")
         comunicacionArduino.send_command("w")
-        calibrar_robot(robot_actual, posicion_inicial_robot["x"], posicion_inicial_robot["y"])
+        calibrar_robot(robot_actual)
+
+    elif politica[posicionActual][2] == 1:  # Movimiento hacia atrás
+        print("Atrás")
+        comunicacionArduino.send_command("s")
+        calibrar_robot(robot_actual)
+
+    elif politica[posicionActual][1] == 1:  # Movimiento hacia la dereha
+        print("Derecha")
+        comunicacionArduino.send_command("d")
+        calibrar_robot(robot_actual)
+
+    elif politica[posicionActual][0] == 1:  # Movimiento hacia la izquierda
+        print("Izquierda")
+        comunicacionArduino.send_command("a")
+        #calibrar_robot(robot_actual)
+
+    
+
 
 
 def fill_cells(frame, matrix, alpha=0.7):

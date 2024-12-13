@@ -164,3 +164,154 @@ cv2.destroyAllWindows()
             Q[s, a] += alpha * (reward + gamma * np.max(Q[next_s]) - Q[s, a])
             s = next_s
     return Q"""
+
+
+
+"""
+def mover_robot(politica, posicionesRobot, maze):
+
+    Mueve el robot considerando las restricciones del laberinto.
+    
+    Args:
+    - politica (dict): Diccionario que define los movimientos posibles
+    - posicionesRobot (list): Lista de posiciones detectadas del robot
+    - maze (list of lists): Matriz que representa el laberinto (0 es camino, 1 es pared)
+    
+    if not posicionesRobot:  # Si no se detectan formas, no hacer nada
+        print("No se detectó posición del robot.")
+        return
+
+    robot_actual = posicionesRobot[0]  # Tomar la posición del primer robot detectado
+    posicionActual = robot_actual["cell_index"]
+    rows = len(maze)
+    cols = len(maze[0])
+
+    print(rows, cols)
+
+    # Función para verificar si un movimiento es válido
+    def movimiento_valido(nueva_fila, nueva_columna):
+        # Verificar si la nueva posición está dentro del tablero y no es una pared
+        return (0 <= nueva_fila < rows and 
+                0 <= nueva_columna < cols and 
+                maze[nueva_fila][nueva_columna] == 0)
+
+
+    # Convertir la posición actual en coordenadas de fila y columna
+    fila_actual = posicionActual // cols
+    columna_actual = posicionActual % cols
+
+    print("Posición actual:", politica[posicionActual])
+
+    # Movimiento hacia adelante
+    if politica[posicionActual][3] == 1:
+        nueva_fila = fila_actual 
+        nueva_columna = columna_actual + 1
+        if movimiento_valido(nueva_fila, nueva_columna):
+            print("Adelante")
+            comunicacionArduino.send_command("w")
+            calibrar_robot(robot_actual)
+        else:
+            calibrar_robot(robot_actual)
+            print("Movimiento hacia adelante bloqueado")
+
+    # Movimiento hacia izquierda
+    elif politica[posicionActual][2] == 1:
+        nueva_fila = fila_actual
+        nueva_columna = columna_actual - 1  # Hacia la izquierda
+        if movimiento_valido(nueva_fila, nueva_columna):
+            print("Izquierda")
+            comunicacionArduino.send_command("a")
+            calibrar_robot(robot_actual)
+        else:
+            #print("Movimiento hacia la izquierda bloqueado")
+            calibrar_robot(robot_actual)
+
+    # Movimiento hacia atras
+    elif politica[posicionActual][1] == 1:
+        nueva_fila = fila_actual + 1  # Hacia abajo
+        nueva_columna = columna_actual
+        if movimiento_valido(nueva_fila, nueva_columna):
+            print("Abajo")
+            comunicacionArduino.send_command("s")
+            calibrar_robot(robot_actual)
+        else:
+            #print("Movimiento hacia abajo bloqueado")
+            calibrar_robot(robot_actual)
+
+    # Movimiento hacia la derecha
+    elif politica[posicionActual][0] == 1:
+        nueva_fila = fila_actual
+        nueva_columna = columna_actual + 1  # Hacia la derecha
+        if movimiento_valido(nueva_fila, nueva_columna):
+            print("Derecha")
+            comunicacionArduino.send_command("d")
+            calibrar_robot(robot_actual)
+        else:
+            print("Movimiento hacia la derecha bloqueado")
+
+"""
+
+
+
+
+
+def mover_robot(politica, posicionesRobot):
+    """
+    Controla el movimiento del robot basado en la política y la posición actual detectada.
+    """
+    if not posicionesRobot:  # Si no se detectan posiciones, no hacer nada
+        print("No se detectó posición del robot.")
+        return
+
+    robot_actual = posicionesRobot[0]  # Tomar la posición del primer robot detectado
+    posicionActual = robot_actual["cell_index"]
+    angulo = robot_actual["angle"]
+
+    # Función para calcular el giro hacia el ángulo más cercano
+    def calcular_giro(angulo_actual, angulo_deseado):
+        diferencia = (angulo_deseado - angulo_actual + 360) % 360
+        if diferencia <= 180:
+            return "d"  # Girar a la derecha
+        else:
+            return "a"  # Girar a la izquierda
+
+    # Comprobar las direcciones en la política
+    if politica[posicionActual][3] == 1 and (angulo < 10 or angulo > 350):
+        print("Adelante")
+        comunicacionArduino.send_command("w")
+    elif politica[posicionActual][2] == 1 and (angulo > 260 and angulo < 280):  # Movimiento hacia Abajo
+        print("Abajo")
+        comunicacionArduino.send_command("w")
+    elif politica[posicionActual][1] == 1 and (angulo > 160 and angulo < 200):  # Movimiento hacia la Izquierda
+        print("Izquierda")
+        comunicacionArduino.send_command("w")  # Avanzar
+    elif politica[posicionActual][0] == 1 and (angulo > 70 and angulo < 110):  # Movimiento hacia la Arriba
+        print("Arriba")
+        comunicacionArduino.send_command("w")  # Avanzar
+    else:
+        print("No hay camino, calculando giro hacia el ángulo más cercano")
+
+        # Ángulos objetivo para cada dirección
+        angulos_objetivo = {
+            3: 0,   # Adelante
+            2: 270, # Abajo
+            1: 180, # Izquierda
+            0: 90   # Arriba
+        }
+
+        # Encontrar el ángulo objetivo más cercano según la política
+        angulo_mas_cercano = None
+        for direccion, angulo_obj in angulos_objetivo.items():
+            if politica[posicionActual][direccion] == 1:
+                if angulo_mas_cercano is None or abs((angulo - angulo_obj) % 360) < abs((angulo - angulo_mas_cercano) % 360):
+                    angulo_mas_cercano = angulo_obj
+
+        # Determinar el giro necesario
+        if angulo_mas_cercano is not None:
+            comando_giro = calcular_giro(angulo, angulo_mas_cercano)
+            comunicacionArduino.send_command(comando_giro)
+            print(f"Girando hacia el ángulo más cercano: {angulo_mas_cercano}, comando: {comando_giro}")
+        else:
+            print("No hay ángulo válido en la política.")
+
+

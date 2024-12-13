@@ -2,7 +2,7 @@ import serial
 import time
 
 # Confiqguración del puerto serial
-PORT = "COM10"  # Cambia esto según el puerto asignado al Bluetooth
+PORT = "COM15"  # Cambia esto según el puerto asignado al Bluetooth
 BAUD_RATE = 115200  # Velocidad de comunicación
 
 # Crear la conexión serial

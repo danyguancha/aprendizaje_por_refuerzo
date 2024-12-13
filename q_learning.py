@@ -48,7 +48,6 @@ def move_and_reward(state, action, labyrinth):
     return state, -1, False
 
 def q_learning(labyrinth, alpha, gamma, epsilon, nS, nA, k):
-
     Q = inicializar_Q(nS, nA)
     retorno = []
     for episodio in range(k):
@@ -69,21 +68,7 @@ def q_learning(labyrinth, alpha, gamma, epsilon, nS, nA, k):
                 retorno.append(retorno_acumulado)
             state, action = next_state, next_action
     return Q, retorno
-"""
-def q_learning(labyrinth, alpha, gamma, epsilon, episodes):
-    nS, nA = rows * cols, 4
-    Q = inicializar_Q(nS, nA)
 
-    for ep in range(episodes):
-        s = 0  # Estado inicial
-        done = False
-        while not done:
-            a = e_greedy(s, Q, epsilon, nA)
-            next_s, reward, done = move_and_reward(s, a, labyrinth)
-            Q[s, a] += alpha * (reward + gamma * np.max(Q[next_s]) - Q[s, a])
-            s = next_s
-    return Q
-"""
 # Generar el laberinto
 def maze_generate(filas, columnas):
     laberinto = [[1 for _ in range(columnas)] for _ in range(filas)]
@@ -275,28 +260,36 @@ def fill_cells(frame, matrix, alpha):
     return frame
 
 def mover_robot(politica, posicionesRobot):
-    """
-    Mueve el robot según la política (tabla Q) y calibra su movimiento para evitar desviaciones.
     
-    :param politica: Tabla Q con las acciones a realizar desde cada estado.
-    :param posicionesRobot: Lista de posiciones detectadas del robot.
-    :param calibrar_robot: Función que calibra el robot para mantenerlo en línea recta.
-    :param posicion_inicial_robot: Diccionario con la posición inicial del robot {"x": x, "y": y}.
-    """
     # Verificar que haya robots detectados
     if not posicionesRobot:
         print("No se detectaron robots.")
         return
 
+    
+
     # Obtener la posición actual del primer robot detectado
     robot_actual = posicionesRobot[0]  # Usar el primer robot detectado
     posicionActual = robot_actual["cell_index"]
 
+    mayor_valor = max(politica[posicionActual])
+    print(mayor_valor)
     print('Posicion Actual: ', posicionActual)
     print("Posición actual según política:", politica[posicionActual])
-    if politica[posicionActual][3] == 1:  # Movimiento hacia adelante
+    if politica[posicionActual][3] == mayor_valor:  # Movimiento hacia adelante
         print("Adelante")
         comunicacionArduino.send_command("w")
+    elif politica[posicionActual][2] == mayor_valor: # Movimiento hacia la izquierda
+        print('Izquierda')
+        comunicacionArduino.send_command('a')
+    elif politica[posicionActual][1] == mayor_valor: # Movimiento hacia atras
+        print('Abajo')
+        comunicacionArduino.send_command('s')
+    elif politica[posicionActual][0] == mayor_valor: # Movimiento hacia la derecha
+        print('Derecha')
+        comunicacionArduino.send_command('d')
+
+
 
     # Leer la acción desde la política
 
