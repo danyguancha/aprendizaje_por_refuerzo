@@ -173,3 +173,6 @@ def main():
         role_name = "Police" if role == 0 else "Thief"
         print(f"State {state}: Police=({pol_x}, {pol_y}), Thief=({lad_x}, {lad_y}), Role={role_name}, Q-Values={q_values}")
 
+
+if __name__ == "__main__":
+    main()

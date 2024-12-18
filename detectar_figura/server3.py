@@ -7,14 +7,24 @@ import threading
 app = Flask(__name__)
 
 # Inicializar variables globales para la cámara y la última imagen capturada
-camera = cv2.VideoCapture("http://192.168.104.25:4747/video")  # Abrir la cámara
+camera = cv2.VideoCapture("http://100.96.139.152:4747/video")  # Abrir la cámara
 #camera = cv2.VideoCapture(0)
 latest_frame = None
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 parameters = cv2.aruco.DetectorParameters()
-rows = 5
-cols = 5
-maze=[[0,0,0,1,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]]
+rows = 3
+cols = 3
+"""maze=[[0,0,0,1,0],
+      [0,1,0,0,0],
+      [0,0,1,0,0],
+      [0,0,1,0,0],
+      [0,0,0,0,0]]"""
+
+maze = [
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ]
 roles={
     8:0, #El valor 8 será el policía
     9:1  #El valor 1 será el ladrón
@@ -40,6 +50,7 @@ def cambiar_roles():
     })
 
 # Función para calcular el ángulo de inclinación
+"""
 def calculate_angle(corners):
     # Extraer las coordenadas de las esquinas del marcador
     top_left, top_right, bottom_right, bottom_left = corners.reshape((4, 2))
@@ -55,7 +66,27 @@ def calculate_angle(corners):
         angle += 360
 
     return angle
+"""
+# Función para calcular el ángulo de inclinación
+# Función para calcular el ángulo de inclinación
+def calculate_angle(corners):
+    # Extraer las coordenadas de las esquinas del marcador
+    top_left, top_right, bottom_right, bottom_left = corners.reshape((4, 2))
 
+    # Calcular el vector desde la esquina superior izquierda (0° referencia)
+    vector = top_right - top_left
+
+    # Invertir el eje Y para que el ángulo aumente en sentido horario
+    vector[1] = -vector[1]
+
+    # Calcular el ángulo en radianes y convertir a grados
+    angle = math.degrees(math.atan2(vector[1], vector[0]))
+
+    # Convertir el ángulo a rango [0, 360]
+    if angle < 0:
+        angle += 360
+
+    return angle
 
 # Dibujar flechas indicando orientación
 def draw_arrows(image, center, angle):
@@ -182,9 +213,9 @@ def detect_shapes_in_image(image, rows, cols):
 
             # Mostrar ID y ángulo en la imagen
             cv2.putText(image, f"ID: {marker_id}", (int(center[0] - 50), int(center[1] - 20)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             cv2.putText(image, f"{int(angle)}''", (int(center[0] - 50), int(center[1])),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
 
 
             row = int(math.floor(center[1]) // cell_height)
@@ -228,7 +259,7 @@ def detect_shapes_in_image(image, rows, cols):
 @app.route('/maze', methods=['GET'])
 def get_maze():
     return jsonify(maze)
-@app.route('/detect_shapes', methods=['POST'])
+@app.route('/detect_shapes', methods=['GET'])
 def detect_shapes_endpoint():
     global latest_frame
     if latest_frame is not None:
